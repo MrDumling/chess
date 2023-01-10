@@ -1,4 +1,4 @@
-use std::{collections::HashMap, io};
+use std::io;
 
 fn main() {
     let board = select_mode();
@@ -17,11 +17,14 @@ fn select_mode() -> Board {
             .read_line(&mut provided_request)
             .expect("Failed to read request");
 
-        if provided_request.starts_with("1") || provided_request.to_lowercase().starts_with("normal") {
+        if provided_request.starts_with("1")
+            || provided_request.to_lowercase().starts_with("normal")
+        {
             return Board::default_position();
-        } else if provided_request.starts_with("2") || provided_request.to_lowercase().starts_with("position") {
-            return Board::position_from_fen("r1b1k1nr/p2p1pNp/n2B4/1p1NP2P/6P1/3P1Q2/P1P1K3/q5b1");
-            // return Board::position_from_FEN(todo!());
+        } else if provided_request.starts_with("2")
+            || provided_request.to_lowercase().starts_with("position")
+        {
+            return Board::position_from_fen(todo!());
         } else {
             println!("Invalid request, please choose from valid requests:");
         }
@@ -29,7 +32,8 @@ fn select_mode() -> Board {
 }
 
 pub struct Board {
-    held_pieces: HashMap<BoardPosition, Piece>,
+    held_pieces: [Option<Piece>; 64],
+    active_side: Side,
 }
 
 impl Board {
@@ -52,66 +56,74 @@ impl Board {
                     'k' => PieceType::King,
                     'q' => PieceType::Queen,
                     'p' => PieceType::Pawn,
-                    x => {panic!("Unknown letter '{x}'")},
+                    x => {
+                        panic!("Unknown letter '{x}'")
+                    }
                 },
             }
         }
 
-        let mut held_pieces = HashMap::<BoardPosition, Piece>::new();
+        let [piece_positions, active_side, castling_capabilities, en_passant_target, half_move_clock, full_move_clock]: [&str; 6] = input_position
+            .split_whitespace()
+            .collect::<Vec<&str>>()
+            .try_into()
+            .expect("Invalid FEN string {input_position}");
 
-        let mut rank = 8;
+        let active_side = match active_side {
+            "w" => Side::WHITE,
+            "b" => Side::BLACK,
+            _ => {
+                panic!("Invalid side in FEN string {active_side}")
+            }
+        };
+
+        const EMPTY: Option<Piece> = None;
+        let mut held_pieces: [Option<Piece>; 64] = [EMPTY; 64];
+
+        let mut rank = 7;
         let mut file = 0;
-        for current_letter in input_position.chars().collect::<Vec<char>>() {
+        for current_letter in piece_positions.chars() {
             if current_letter == '/' {
                 rank -= 1;
                 file = 0;
             } else if current_letter.is_numeric() {
-                file += current_letter as u8 - '0' as u8;
+                file += current_letter as usize - '0' as usize;
             } else {
+                held_pieces[(rank) * 8 + file] = Some(get_piece_from_char(current_letter));
                 file += 1;
-                let position = BoardPosition { rank, file };
-                held_pieces.insert(position, get_piece_from_char(current_letter));
             }
 
-            if rank == 1 && file == 8 {
+            if rank == 0 && file == 8 {
                 break;
             }
         }
 
         Board {
-            held_pieces
+            held_pieces,
+            active_side,
         }
     }
 
     fn display_board(&self) {
-        for rank in (1..=8).rev() {
-            for file in 1..=8 {
-                print!(
-                    "{}",
-                    match self.held_pieces.get(&BoardPosition { rank, file }) {
-                        Some(x) => {
-                            x.get_display()
-                        }
-                        None => {
-                            if (rank + file) % 2 == 0 {
-                                ' '
-                            } else {
-                                '█'
-                            }
-                        }
-                    }
-                )
+        for (index, piece) in self.held_pieces.iter().enumerate() {
+            if index % 8 == 0 {
+                println!();
             }
 
-            println!();
+            print!("{}", match piece {
+                Some(x) => {
+                    x.get_display()
+                },
+                None => {
+                    if ((index / 8) + (index % 8)) % 2 == 0 {
+                        ' '
+                    } else {
+                        '█'
+                    }
+                }
+            });
         }
     }
-}
-
-#[derive(Eq, PartialEq, Hash)]
-pub struct BoardPosition {
-    rank: u8,
-    file: u8,
 }
 
 enum Side {
