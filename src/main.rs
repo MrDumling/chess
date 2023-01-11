@@ -1,4 +1,8 @@
 use std::io;
+mod piece;
+mod board;
+
+use crate::{piece::*, board::*};
 
 fn main() {
     let board = select_mode();
@@ -31,11 +35,6 @@ fn select_mode() -> Board {
     }
 }
 
-pub struct Board {
-    held_pieces: [Option<Piece>; 64],
-    active_side: Side,
-}
-
 impl Board {
     fn default_position() -> Self {
         Board::position_from_fen("rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1")
@@ -63,7 +62,7 @@ impl Board {
             }
         }
 
-        let [piece_positions, active_side, castling_capabilities, en_passant_target, half_move_clock, full_move_clock]: [&str; 6] = input_position
+        let [piece_positions, active_side, castling_capabilities, en_passant_target, _, _]: [&str; 6] = input_position
             .split_whitespace()
             .collect::<Vec<&str>>()
             .try_into()
@@ -92,15 +91,12 @@ impl Board {
                 held_pieces[(rank) * 8 + file] = Some(get_piece_from_char(current_letter));
                 file += 1;
             }
-
-            if rank == 0 && file == 8 {
-                break;
-            }
         }
 
         Board {
             held_pieces,
             active_side,
+            caslting_capabilities: castling_capabilities.into(),
         }
     }
 
@@ -126,52 +122,7 @@ impl Board {
     }
 }
 
-enum Side {
+pub enum Side {
     WHITE,
     BLACK,
-}
-
-enum PieceType {
-    Rook,
-    Knight,
-    Bishop,
-    Queen,
-    King,
-    Pawn,
-}
-
-struct Piece {
-    piece_type: PieceType,
-    side: Side,
-}
-
-impl Piece {
-    fn get_display(&self) -> char {
-        match self.piece_type {
-            PieceType::Rook => match self.side {
-                Side::WHITE => '♖',
-                Side::BLACK => '♜',
-            },
-            PieceType::Knight => match self.side {
-                Side::WHITE => '♘',
-                Side::BLACK => '♞',
-            },
-            PieceType::Bishop => match self.side {
-                Side::WHITE => '♗',
-                Side::BLACK => '♝',
-            },
-            PieceType::Queen => match self.side {
-                Side::WHITE => '♕',
-                Side::BLACK => '♛',
-            },
-            PieceType::King => match self.side {
-                Side::WHITE => '♔',
-                Side::BLACK => '♚',
-            },
-            PieceType::Pawn => match self.side {
-                Side::WHITE => '♙',
-                Side::BLACK => '♟',
-            },
-        }
-    }
 }
